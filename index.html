@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Files</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <h1>🗄️ My Files</h1>
+            <div id="login-form">
+                <input type="password" id="password-input" placeholder="Enter password" autocomplete="current-password">
+                <button id="unlock-btn" class="btn btn-primary">Unlock</button>
+                <div id="first-time-message" class="divider" style="display: none;">
+                    <span>or</span>
+                    <p class="text-secondary">First time? Set password above</p>
+                </div>
+            </div>
+            <div id="login-error" class="error-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="screen" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <h1>🗄️ My Files</h1>
+            <button id="logout-btn" class="btn btn-secondary">Logout</button>
+        </header>
+
+        <!-- Upload Zone -->
+        <div class="upload-section">
+            <div id="drop-zone" class="drop-zone">
+                <p>📁 Drop files here or click to browse</p>
+                <input type="file" id="file-input" multiple hidden>
+            </div>
+            <div id="upload-progress" class="upload-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <p id="progress-text">Uploading...</p>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div class="files-section">
+            <div class="files-header">
+                <h2 id="files-count">Files (0)</h2>
+                <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+            </div>
+            <div id="files-list" class="files-list">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
