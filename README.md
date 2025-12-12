@@ -1,103 +1,25 @@
 # My Files - Personal Cloud Storage
 
-A simple, password-protected file management app using Supabase Storage. Built with vanilla JavaScript - no build tools required.
+A simple, password-protected file management app using a Worker API backend. Built with vanilla JavaScript - no build tools required.
 
 ## Features
 
-- **Password Protection**: Hardcoded SHA-256 password hash (default: "password")
+- **Password Protection**: API-based authentication with JWT tokens
 - **File Upload**: Drag-and-drop or click to browse
 - **File Management**: List, download, and delete files
 - **Responsive Design**: Works on mobile and desktop
 - **Dark Theme**: Monospace font with dark color scheme
 - **Simple Deployment**: Deploy to GitHub Pages in minutes
+- **Secure Storage**: Files stored in R2 with Cloudflare Workers
 
 ## Prerequisites
 
-1. A Supabase account (free tier works)
-2. A GitHub account (for deployment)
+1. A GitHub account (for deployment)
+2. The API is already configured and running at `https://temp-storage-api.gooners.workers.dev`
 
 ## Setup Instructions
 
-### 1. Set Up Supabase
-
-1. Go to [https://supabase.com](https://supabase.com) and create a free account
-2. Create a new project
-3. Wait for the project to finish setting up (~2 minutes)
-
-### 2. Create Storage Bucket
-
-1. In your Supabase dashboard, go to **Storage** in the left sidebar
-2. Click **Create a new bucket**
-3. Name it: `files`
-4. Set it as **Public** (or Private - both work, but public is simpler)
-5. Click **Create bucket**
-
-### 3. Set Storage Policies
-
-1. Click on the `files` bucket
-2. Go to the **Policies** tab
-3. Click **New Policy**
-4. For quick setup, create these policies:
-
-   **Allow Public Uploads:**
-   - Policy name: `Allow public uploads`
-   - Allowed operation: `INSERT`
-   - Target roles: `public`
-   - USING expression: `true`
-
-   **Allow Public Downloads:**
-   - Policy name: `Allow public downloads`
-   - Allowed operation: `SELECT`
-   - Target roles: `public`
-   - USING expression: `true`
-
-   **Allow Public Deletes:**
-   - Policy name: `Allow public deletes`
-   - Allowed operation: `DELETE`
-   - Target roles: `public`
-   - USING expression: `true`
-
-   > **Note**: These policies are permissive for personal use. For better security, implement Supabase Auth and restrict policies to authenticated users.
-
-### 4. Get Your Supabase Credentials
-
-1. In your Supabase dashboard, go to **Settings** > **API**
-2. Copy these two values:
-   - **Project URL** (looks like `https://xxxxx.supabase.co`)
-   - **anon public** key (under "Project API keys")
-
-### 5. Configure the App
-
-1. Open `app.js` in your code editor
-2. Find these lines at the top:
-
-   ```javascript
-   const SUPABASE_URL = 'https://xxxxx.supabase.co';  // USER_REPLACES_THIS
-   const SUPABASE_ANON_KEY = 'eyJhbGc...';            // USER_REPLACES_THIS
-   const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679';
-   ```
-
-3. Replace with your actual values:
-
-   ```javascript
-   const SUPABASE_URL = 'https://your-project.supabase.co';
-   const SUPABASE_ANON_KEY = 'your-anon-key-here';
-   const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679'; // SHA-256 of "password"
-   ```
-
-4. **(Optional) Change the password**: To use a different password, generate a SHA-256 hash:
-   - Visit an online SHA-256 generator or use your browser console:
-   ```javascript
-   const password = "your-new-password";
-   const encoder = new TextEncoder();
-   const data = encoder.encode(password);
-   crypto.subtle.digest('SHA-256', data).then(hash => {
-     console.log(Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''));
-   });
-   ```
-   - Replace the `AUTH_HASH` value with your generated hash
-
-### 6. Deploy to GitHub Pages
+### Deploy to GitHub Pages
 
 #### Option A: Using GitHub Web Interface
 
@@ -134,9 +56,12 @@ git push -u origin main
 ### Logging In
 
 1. Visit your deployed app URL
-2. Enter the password (default: "password")
+2. Enter your password
 3. Click **Unlock**
-4. You're now logged in!
+4. The app will authenticate with the API and receive a JWT token
+5. You're now logged in!
+
+> **Note**: The password is verified by the Worker API. Contact the API administrator for the correct password.
 
 ### Uploading Files
 
@@ -159,51 +84,62 @@ git push -u origin main
 
 ## Security Notes
 
-- **Hardcoded password**: The password is hardcoded in the source code as a SHA-256 hash
-- **Client-side only**: Password verification happens in your browser
-- **No server**: Everything runs on the client, Supabase handles storage
-- **Not for sensitive data**: This is "security through obscurity"
-- **Supabase policies**: Anyone with your Supabase URL could access files if they bypass the client
-- **For personal use**: Perfect for non-sensitive files, convenient personal storage
-- **Change the hash**: If deploying publicly, generate a new hash for your own password
+- **API-based authentication**: Password verification is handled by the Worker API
+- **JWT tokens**: Authentication tokens are stored in sessionStorage
+- **Session management**: Tokens expire after a period of inactivity
+- **Server-side validation**: All file operations are validated by the API
+- **Cloudflare R2**: Files are stored securely in Cloudflare's object storage
+- **For personal use**: Perfect for temporary file storage and sharing
+- **Token security**: Tokens are only stored in sessionStorage and cleared on logout
 
-For production use with sensitive data, implement:
-- Supabase Auth (user accounts)
-- Row Level Security (RLS) policies
-- Server-side validation
+Security features:
+- Password-protected access
+- Token-based authentication
+- Server-side file access control
+- Automatic session expiration
 
 ## Troubleshooting
 
-### "Storage not configured" error
-- Check that your Supabase URL and key are correct in `app.js`
-- Verify the `files` bucket exists in Supabase Storage
-- Check that storage policies are set correctly
+### Can't login / Wrong password
+- Make sure you have the correct password from the API administrator
+- Check the browser console for error messages
+- Verify the API URL is correct in `app.js`
+- Check your network connection
+
+### "Session expired" message
+- Your authentication token has expired
+- Simply login again to get a new token
+- Tokens are stored in sessionStorage and cleared on browser close
 
 ### Files won't upload
 - Check file size (must be under 50MB)
-- Verify storage policies allow INSERT
+- Verify you're still logged in (token hasn't expired)
 - Check browser console for errors
+- Ensure you have network connectivity
 
 ### Files won't download
-- Verify storage policies allow SELECT
-- Check that the file still exists in Supabase
-
-### Can't delete files
-- Verify storage policies allow DELETE
+- Verify you're still logged in
+- Check that the file still exists
 - Check browser console for errors
 
-### Wrong password / Can't login
-- The default password is "password"
-- If you changed the `AUTH_HASH` in `app.js`, make sure you're using the correct password
-- Check the browser console for errors
+### Can't delete files
+- Verify you're still logged in
+- Check browser console for errors
+- Ensure you have network connectivity
+
+### API not responding
+- Check if the Worker API is online
+- Verify the API_URL in `app.js` is correct
+- Check browser console for CORS or network errors
 
 ## Technical Stack
 
 - **Frontend**: Vanilla HTML, CSS, JavaScript
-- **Storage**: Supabase Storage
-- **Auth**: Hardcoded SHA-256 hash comparison
+- **Backend**: Cloudflare Workers API
+- **Storage**: Cloudflare R2 (object storage)
+- **Auth**: JWT-based authentication
 - **Hosting**: GitHub Pages (or any static host)
-- **Dependencies**: Supabase JS SDK (via CDN)
+- **Dependencies**: None (no external libraries)
 - **Theme**: Dark mode with monospace font
 
 ## File Structure
@@ -224,8 +160,8 @@ For production use with sensitive data, implement:
 - Mobile browsers: ✅
 
 Requires:
-- SubtleCrypto API (HTTPS required in production)
-- sessionStorage
+- sessionStorage (for JWT token storage)
+- Fetch API
 - Modern ES6+ JavaScript
 
 ## License
@@ -235,5 +171,5 @@ Free to use for personal projects. No warranty provided.
 ## Credits
 
 Built with:
-- [Supabase](https://supabase.com) - Backend and storage
-- [Supabase JS SDK](https://github.com/supabase/supabase-js) - Client library
+- [Cloudflare Workers](https://workers.cloudflare.com) - Serverless backend
+- [Cloudflare R2](https://developers.cloudflare.com/r2/) - Object storage

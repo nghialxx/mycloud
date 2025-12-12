@@ -1,52 +1,49 @@
 // ============================================================
-// CONFIGURATION - USER MUST REPLACE THESE VALUES
+// CONFIGURATION
 // ============================================================
-const SUPABASE_URL = 'https://pvxyporcjqavwpehglag.supabase.co';  
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2eHlwb3JjanFhdndwZWhnbGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MDE4NjQsImV4cCI6MjA3MTA3Nzg2NH0.aSc08LE1pq-soFq-IB5Z_f1bEvffn82QmaEzLy1qcD8';         
-const BUCKET_NAME = 'files';
+const API_URL = 'https://temp-storage-api.gooners.workers.dev';
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-
-// Hardcoded password hash (SHA-256 of "password")
-const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679';
-
-// ============================================================
-// SUPABASE CLIENT
-// ============================================================
-let supabase;
-
-try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (error) {
-    console.error('Failed to initialize Supabase:', error);
-}
 
 // ============================================================
 // AUTHENTICATION SYSTEM
 // ============================================================
 
-// SHA-256 hashing function
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// Get stored token
+function getToken() {
+    return sessionStorage.getItem('token');
 }
 
-// Check if user is logged in (session)
+// Check if user is logged in
 function isLoggedIn() {
-    return sessionStorage.getItem('authenticated') === 'true';
+    return getToken() !== null;
 }
 
-// Verify password against hardcoded hash
-async function verifyPassword(password) {
-    const hash = await hashPassword(password);
-    return hash === AUTH_HASH;
+// Login with API
+async function login(password) {
+    try {
+        const res = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            sessionStorage.setItem('token', data.token);
+            return { success: true };
+        } else {
+            return { success: false, error: data.error || 'Login failed' };
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        return { success: false, error: 'Network error. Check your connection.' };
+    }
 }
 
 // Logout
 function logout() {
-    sessionStorage.removeItem('authenticated');
+    sessionStorage.removeItem('token');
     showLoginScreen();
 }
 
@@ -124,6 +121,13 @@ async function uploadFile(file) {
         return false;
     }
 
+    const token = getToken();
+    if (!token) {
+        showToast('Not authenticated', 'error');
+        logout();
+        return false;
+    }
+
     // Show progress
     const progressDiv = document.getElementById('upload-progress');
     const progressFill = document.getElementById('progress-fill');
@@ -134,27 +138,30 @@ async function uploadFile(file) {
     progressText.textContent = `Uploading ${file.name}...`;
 
     try {
-        // Check if file already exists
-        const { data: existingFiles } = await supabase.storage
-            .from(BUCKET_NAME)
-            .list('', { search: file.name });
+        const formData = new FormData();
+        formData.append('file', file);
 
-        let filename = file.name;
-        if (existingFiles && existingFiles.length > 0) {
-            filename = generateUniqueFilename(file.name);
+        const res = await fetch(`${API_URL}/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (res.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            logout();
+            return false;
         }
 
-        // Upload file
-        const { data, error } = await supabase.storage
-            .from(BUCKET_NAME)
-            .upload(filename, file, {
-                cacheControl: '3600',
-                upsert: false
-            });
+        const data = await res.json();
 
-        if (error) throw error;
+        if (!res.ok) {
+            throw new Error(data.error || 'Upload failed');
+        }
 
-        // Simulate progress (Supabase doesn't provide upload progress)
+        // Simulate progress
         progressFill.style.width = '100%';
 
         setTimeout(() => {
@@ -167,12 +174,7 @@ async function uploadFile(file) {
     } catch (error) {
         console.error('Upload error:', error);
         progressDiv.style.display = 'none';
-
-        if (error.message.includes('not found')) {
-            showToast('Storage not configured. Check Supabase setup.', 'error');
-        } else {
-            showToast('Upload failed. Try again.', 'error');
-        }
+        showToast(error.message || 'Upload failed. Try again.', 'error');
         return false;
     }
 }
@@ -198,21 +200,35 @@ async function handleFileSelection(files) {
 async function loadFiles() {
     const filesList = document.getElementById('files-list');
     const filesCount = document.getElementById('files-count');
+    const token = getToken();
+
+    if (!token) {
+        logout();
+        return;
+    }
 
     filesList.innerHTML = '<div class="loading">Loading files...</div>';
 
     try {
-        const { data, error } = await supabase.storage
-            .from(BUCKET_NAME)
-            .list('', {
-                limit: 100,
-                sortBy: { column: 'created_at', order: 'desc' }
-            });
+        const res = await fetch(`${API_URL}/files`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-        if (error) throw error;
+        if (res.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            logout();
+            return;
+        }
 
-        // Filter out directory markers
-        const files = data.filter(file => file.name && file.id);
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to load files');
+        }
+
+        const files = data.files || [];
 
         filesCount.textContent = `Files (${files.length})`;
 
@@ -231,12 +247,7 @@ async function loadFiles() {
     } catch (error) {
         console.error('Load files error:', error);
         filesList.innerHTML = '<div class="empty-state">Failed to load files. Check your connection.</div>';
-
-        if (error.message.includes('not found')) {
-            showToast('Storage not configured. Check Supabase setup.', 'error');
-        } else {
-            showToast('Failed to load files', 'error');
-        }
+        showToast(error.message || 'Failed to load files', 'error');
     }
 }
 
@@ -255,10 +266,10 @@ function createFileItem(file) {
     fileMeta.className = 'file-meta';
 
     const fileSize = document.createElement('span');
-    fileSize.textContent = formatFileSize(file.metadata?.size || 0);
+    fileSize.textContent = formatFileSize(file.size || 0);
 
     const fileDate = document.createElement('span');
-    fileDate.textContent = formatDate(file.created_at);
+    fileDate.textContent = formatDate(file.uploadedAt || file.uploaded);
 
     fileMeta.appendChild(fileSize);
     fileMeta.appendChild(fileDate);
@@ -293,16 +304,34 @@ function createFileItem(file) {
 // ============================================================
 
 async function downloadFile(filename) {
+    const token = getToken();
+    if (!token) {
+        logout();
+        return;
+    }
+
     try {
-        const { data, error } = await supabase.storage
-            .from(BUCKET_NAME)
-            .createSignedUrl(filename, 60);
+        const res = await fetch(`${API_URL}/download/${encodeURIComponent(filename)}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-        if (error) throw error;
+        if (res.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            logout();
+            return;
+        }
 
-        // Trigger download
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Download failed');
+        }
+
+        // Trigger download using the signed URL
         const link = document.createElement('a');
-        link.href = data.signedUrl;
+        link.href = data.url;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
@@ -312,7 +341,7 @@ async function downloadFile(filename) {
 
     } catch (error) {
         console.error('Download error:', error);
-        showToast('Download failed. Try again.', 'error');
+        showToast(error.message || 'Download failed. Try again.', 'error');
     }
 }
 
@@ -325,19 +354,38 @@ async function deleteFile(filename) {
         return;
     }
 
-    try {
-        const { error } = await supabase.storage
-            .from(BUCKET_NAME)
-            .remove([filename]);
+    const token = getToken();
+    if (!token) {
+        logout();
+        return;
+    }
 
-        if (error) throw error;
+    try {
+        const res = await fetch(`${API_URL}/delete/${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (res.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            logout();
+            return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Delete failed');
+        }
 
         showToast('File deleted successfully', 'success');
         await loadFiles();
 
     } catch (error) {
         console.error('Delete error:', error);
-        showToast('Could not delete file. Try again.', 'error');
+        showToast(error.message || 'Could not delete file. Try again.', 'error');
     }
 }
 
@@ -367,13 +415,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Verify password
-        const isValid = await verifyPassword(password);
-        if (isValid) {
-            sessionStorage.setItem('authenticated', 'true');
+        // Disable button during login
+        unlockBtn.disabled = true;
+        unlockBtn.textContent = 'Logging in...';
+
+        // Login via API
+        const result = await login(password);
+
+        unlockBtn.disabled = false;
+        unlockBtn.textContent = 'Unlock';
+
+        if (result.success) {
             showMainApp();
         } else {
-            loginError.textContent = 'Incorrect password';
+            loginError.textContent = result.error || 'Incorrect password';
             loginError.style.display = 'block';
         }
     });
