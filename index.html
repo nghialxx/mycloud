@@ -11,14 +11,10 @@
     <!-- Login Screen -->
     <div id="login-screen" class="screen">
         <div class="login-container">
-            <h1>🗄️ My Files</h1>
+            <h1>MY FILES</h1>
             <div id="login-form">
                 <input type="password" id="password-input" placeholder="Enter password" autocomplete="current-password">
                 <button id="unlock-btn" class="btn btn-primary">Unlock</button>
-                <div id="first-time-message" class="divider" style="display: none;">
-                    <span>or</span>
-                    <p class="text-secondary">First time? Set password above</p>
-                </div>
             </div>
             <div id="login-error" class="error-message" style="display: none;"></div>
         </div>
@@ -28,14 +24,14 @@
     <div id="main-app" class="screen" style="display: none;">
         <!-- Header -->
         <header class="header">
-            <h1>🗄️ My Files</h1>
+            <h1>MY FILES</h1>
             <button id="logout-btn" class="btn btn-secondary">Logout</button>
         </header>
 
         <!-- Upload Zone -->
         <div class="upload-section">
             <div id="drop-zone" class="drop-zone">
-                <p>📁 Drop files here or click to browse</p>
+                <p>Drop files here or click to browse</p>
                 <input type="file" id="file-input" multiple hidden>
             </div>
             <div id="upload-progress" class="upload-progress" style="display: none;">

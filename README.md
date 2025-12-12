@@ -4,11 +4,11 @@ A simple, password-protected file management app using Supabase Storage. Built w
 
 ## Features
 
-- **Password Protection**: Client-side SHA-256 password hashing
+- **Password Protection**: Hardcoded SHA-256 password hash (default: "password")
 - **File Upload**: Drag-and-drop or click to browse
 - **File Management**: List, download, and delete files
 - **Responsive Design**: Works on mobile and desktop
-- **Dark Mode**: Automatic theme based on system preferences
+- **Dark Theme**: Monospace font with dark color scheme
 - **Simple Deployment**: Deploy to GitHub Pages in minutes
 
 ## Prerequisites
@@ -74,6 +74,7 @@ A simple, password-protected file management app using Supabase Storage. Built w
    ```javascript
    const SUPABASE_URL = 'https://xxxxx.supabase.co';  // USER_REPLACES_THIS
    const SUPABASE_ANON_KEY = 'eyJhbGc...';            // USER_REPLACES_THIS
+   const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679';
    ```
 
 3. Replace with your actual values:
@@ -81,7 +82,20 @@ A simple, password-protected file management app using Supabase Storage. Built w
    ```javascript
    const SUPABASE_URL = 'https://your-project.supabase.co';
    const SUPABASE_ANON_KEY = 'your-anon-key-here';
+   const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679'; // SHA-256 of "password"
    ```
+
+4. **(Optional) Change the password**: To use a different password, generate a SHA-256 hash:
+   - Visit an online SHA-256 generator or use your browser console:
+   ```javascript
+   const password = "your-new-password";
+   const encoder = new TextEncoder();
+   const data = encoder.encode(password);
+   crypto.subtle.digest('SHA-256', data).then(hash => {
+     console.log(Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''));
+   });
+   ```
+   - Replace the `AUTH_HASH` value with your generated hash
 
 ### 6. Deploy to GitHub Pages
 
@@ -117,13 +131,12 @@ git push -u origin main
 
 ## Usage
 
-### First Time Setup
+### Logging In
 
 1. Visit your deployed app URL
-2. You'll see a login screen with "First time? Set password" message
-3. Enter a password and click **Unlock**
-4. Your password will be hashed and stored locally
-5. You're now logged in!
+2. Enter the password (default: "password")
+3. Click **Unlock**
+4. You're now logged in!
 
 ### Uploading Files
 
@@ -134,33 +147,25 @@ git push -u origin main
 
 ### Managing Files
 
-- **Download**: Click the ⬇ button next to any file
-- **Delete**: Click the 🗑 button and confirm
-- **Refresh**: Click the **Refresh** button to reload the file list
+- **Download**: Click the "Download" button next to any file
+- **Delete**: Click the "Delete" button and confirm
+- **Refresh**: Click the "Refresh" button to reload the file list
 
 ### Logging Out
 
 - Click **Logout** in the top-right corner
-- This clears your session but keeps your password
-- You'll need to enter your password again to access the app
-
-### Changing Password
-
-To change your password:
-
-1. Open browser DevTools (F12)
-2. Go to **Application** > **Local Storage**
-3. Delete the `auth_hash` entry
-4. Refresh the page
-5. Set a new password
+- This clears your session
+- You'll need to enter the password again to access the app
 
 ## Security Notes
 
-- **Client-side only**: Password hashing happens in your browser
+- **Hardcoded password**: The password is hardcoded in the source code as a SHA-256 hash
+- **Client-side only**: Password verification happens in your browser
 - **No server**: Everything runs on the client, Supabase handles storage
 - **Not for sensitive data**: This is "security through obscurity"
 - **Supabase policies**: Anyone with your Supabase URL could access files if they bypass the client
 - **For personal use**: Perfect for non-sensitive files, convenient personal storage
+- **Change the hash**: If deploying publicly, generate a new hash for your own password
 
 For production use with sensitive data, implement:
 - Supabase Auth (user accounts)
@@ -187,19 +192,19 @@ For production use with sensitive data, implement:
 - Verify storage policies allow DELETE
 - Check browser console for errors
 
-### Forgot password
-- Open DevTools > Application > Local Storage
-- Delete the `auth_hash` entry
-- Refresh and set a new password
-- **Note**: This won't affect your uploaded files
+### Wrong password / Can't login
+- The default password is "password"
+- If you changed the `AUTH_HASH` in `app.js`, make sure you're using the correct password
+- Check the browser console for errors
 
 ## Technical Stack
 
 - **Frontend**: Vanilla HTML, CSS, JavaScript
 - **Storage**: Supabase Storage
-- **Auth**: Client-side SHA-256 hashing
+- **Auth**: Hardcoded SHA-256 hash comparison
 - **Hosting**: GitHub Pages (or any static host)
 - **Dependencies**: Supabase JS SDK (via CDN)
+- **Theme**: Dark mode with monospace font
 
 ## File Structure
 
@@ -220,7 +225,7 @@ For production use with sensitive data, implement:
 
 Requires:
 - SubtleCrypto API (HTTPS required in production)
-- localStorage and sessionStorage
+- sessionStorage
 - Modern ES6+ JavaScript
 
 ## License

@@ -6,6 +6,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const BUCKET_NAME = 'files';
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
+// Hardcoded password hash (SHA-256 of "password")
+const AUTH_HASH = 'cd1575bf99398a48ae4f51e6618d2a89af7e8f16fdc89598acaf385b1b460679';
+
 // ============================================================
 // SUPABASE CLIENT
 // ============================================================
@@ -30,28 +33,15 @@ async function hashPassword(password) {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Check if user has set a password
-function hasStoredPassword() {
-    return localStorage.getItem('auth_hash') !== null;
-}
-
 // Check if user is logged in (session)
 function isLoggedIn() {
     return sessionStorage.getItem('authenticated') === 'true';
 }
 
-// Set password (first time)
-async function setPassword(password) {
-    const hash = await hashPassword(password);
-    localStorage.setItem('auth_hash', hash);
-    sessionStorage.setItem('authenticated', 'true');
-}
-
-// Verify password
+// Verify password against hardcoded hash
 async function verifyPassword(password) {
     const hash = await hashPassword(password);
-    const storedHash = localStorage.getItem('auth_hash');
-    return hash === storedHash;
+    return hash === AUTH_HASH;
 }
 
 // Logout
@@ -66,14 +56,6 @@ function showLoginScreen() {
     document.getElementById('main-app').style.display = 'none';
     document.getElementById('password-input').value = '';
     document.getElementById('login-error').style.display = 'none';
-
-    // Show "first time" message if no password is set
-    const firstTimeMsg = document.getElementById('first-time-message');
-    if (!hasStoredPassword()) {
-        firstTimeMsg.style.display = 'block';
-    } else {
-        firstTimeMsg.style.display = 'none';
-    }
 }
 
 function showMainApp() {
@@ -267,7 +249,7 @@ function createFileItem(file) {
 
     const fileName = document.createElement('div');
     fileName.className = 'file-name';
-    fileName.textContent = `📄 ${file.name}`;
+    fileName.textContent = file.name;
 
     const fileMeta = document.createElement('div');
     fileMeta.className = 'file-meta';
@@ -289,12 +271,12 @@ function createFileItem(file) {
 
     const downloadBtn = document.createElement('button');
     downloadBtn.className = 'btn btn-secondary btn-small';
-    downloadBtn.textContent = '⬇';
+    downloadBtn.textContent = 'Download';
     downloadBtn.onclick = () => downloadFile(file.name);
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-danger btn-small';
-    deleteBtn.textContent = '🗑';
+    deleteBtn.textContent = 'Delete';
     deleteBtn.onclick = () => deleteFile(file.name);
 
     actions.appendChild(downloadBtn);
@@ -385,21 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!hasStoredPassword()) {
-            // First time - set password
-            await setPassword(password);
-            showToast('Password set successfully', 'success');
+        // Verify password
+        const isValid = await verifyPassword(password);
+        if (isValid) {
+            sessionStorage.setItem('authenticated', 'true');
             showMainApp();
         } else {
-            // Verify password
-            const isValid = await verifyPassword(password);
-            if (isValid) {
-                sessionStorage.setItem('authenticated', 'true');
-                showMainApp();
-            } else {
-                loginError.textContent = 'Incorrect password';
-                loginError.style.display = 'block';
-            }
+            loginError.textContent = 'Incorrect password';
+            loginError.style.display = 'block';
         }
     });
 
