@@ -1,8 +1,8 @@
 // ============================================================
 // CONFIGURATION - USER MUST REPLACE THESE VALUES
 // ============================================================
-const SUPABASE_URL = 'https://xxxxx.supabase.co';  // USER_REPLACES_THIS
-const SUPABASE_ANON_KEY = 'eyJhbGc...';            // USER_REPLACES_THIS
+const SUPABASE_URL = 'https://pvxyporcjqavwpehglag.supabase.co';  
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2eHlwb3JjanFhdndwZWhnbGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1MDE4NjQsImV4cCI6MjA3MTA3Nzg2NH0.aSc08LE1pq-soFq-IB5Z_f1bEvffn82QmaEzLy1qcD8';         
 const BUCKET_NAME = 'files';
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
