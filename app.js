@@ -228,8 +228,10 @@ async function loadFiles() {
             throw new Error(data.error || 'Failed to load files');
         }
 
-        const files = data.files || [];
+        // API returns array directly, not wrapped in { files: [...] }
+        const files = Array.isArray(data) ? data : (data.files || []);
 
+        console.log('Loaded files:', files);
         filesCount.textContent = `Files (${files.length})`;
 
         if (files.length === 0) {
@@ -252,6 +254,7 @@ async function loadFiles() {
 }
 
 function createFileItem(file) {
+    console.log('Creating file item:', file);
     const div = document.createElement('div');
     div.className = 'file-item';
 
@@ -266,10 +269,10 @@ function createFileItem(file) {
     fileMeta.className = 'file-meta';
 
     const fileSize = document.createElement('span');
-    fileSize.textContent = formatFileSize(file.size || 0);
+    fileSize.textContent = formatFileSize(file.metadata?.size || 0);
 
     const fileDate = document.createElement('span');
-    fileDate.textContent = formatDate(file.uploadedAt || file.uploaded);
+    fileDate.textContent = formatDate(file.created_at);
 
     fileMeta.appendChild(fileSize);
     fileMeta.appendChild(fileDate);
