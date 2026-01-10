@@ -1,0 +1,32 @@
+name: Keep Supabase Active
+
+on:
+  schedule:
+    # Run every 4 days at 2 AM UTC
+    - cron: '0 2 */4 * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Worker API
+        run: |
+          # Ping the Worker API which will access Supabase
+          curl -f "${API_URL}/files" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            || echo "Ping failed but that's okay"
+        env:
+          API_URL: 'https://temp-storage-api.gooners.workers.dev'
+          TOKEN: ${{ secrets.API_TOKEN }}
+
+      - name: Direct Supabase Ping (fallback)
+        if: always()
+        run: |
+          # Direct ping to Supabase as backup
+          curl -f "${SUPABASE_URL}/rest/v1/" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            || echo "Supabase direct ping failed"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

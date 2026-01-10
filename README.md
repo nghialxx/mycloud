@@ -19,7 +19,24 @@ A simple, password-protected file management app using a Worker API backend. Bui
 
 ## Setup Instructions
 
-### Deploy to GitHub Pages
+### 1. Keep Supabase Active (Optional but Recommended)
+
+The backend Worker API uses Supabase Storage. To prevent Supabase from pausing due to inactivity:
+
+**Option A: Add secrets to GitHub** (if deploying via GitHub Pages)
+1. Go to your GitHub repo → Settings → Secrets → Actions
+2. Add these secrets:
+   - `API_TOKEN`: Your Worker API authentication token
+   - `SUPABASE_URL`: Your Supabase project URL (optional fallback)
+   - `SUPABASE_ANON_KEY`: Your Supabase anon key (optional fallback)
+3. The included GitHub Action will ping every 4 days automatically
+
+**Option B: Use external cron service**
+- Use [cron-job.org](https://cron-job.org) or [UptimeRobot](https://uptimerobot.com)
+- Set up a job to ping `https://temp-storage-api.gooners.workers.dev/files` every 4-5 days
+- This keeps the Worker active, which in turn keeps Supabase active
+
+### 2. Deploy to GitHub Pages
 
 #### Option A: Using GitHub Web Interface
 
