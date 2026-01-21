@@ -332,13 +332,25 @@ async function downloadFile(filename) {
             throw new Error(data.error || 'Download failed');
         }
 
-        // Trigger download using the signed URL
+        // Fetch the file as a blob to force download (avoid CORS issues)
+        const fileRes = await fetch(data.url);
+        if (!fileRes.ok) {
+            throw new Error('Failed to fetch file from storage');
+        }
+
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Trigger download using blob URL
         const link = document.createElement('a');
-        link.href = data.url;
+        link.href = blobUrl;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Clean up blob URL after a short delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
 
         showToast('Download started', 'success');
 
